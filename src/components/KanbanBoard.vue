@@ -41,12 +41,12 @@ function handleDragEnd() {
     <section
       v-for="status in TASK_STATUS_META"
       :key="status.value"
-      class="flex flex-col rounded-2xl border border-slate-200 bg-slate-50 p-3 transition"
-      :class="dragOverStatus === status.value ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-100' : ''"
+      class="flex flex-col rounded-2xl border border-slate-200 bg-slate-50 p-3 transition dark:border-slate-700 dark:bg-slate-800/60"
+      :class="dragOverStatus === status.value ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-100 dark:border-blue-400 dark:bg-blue-900/30 dark:ring-blue-800' : ''"
     >
       <header class="mb-3 flex items-center justify-between px-1">
-        <h2 class="text-sm font-semibold text-slate-700">{{ status.label }}</h2>
-        <span class="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-500">
+        <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ status.label }}</h2>
+        <span class="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-700 dark:text-slate-300">
           {{ tasksByStatus[status.value].length }}
         </span>
       </header>
@@ -71,7 +71,7 @@ function handleDragEnd() {
 
         <div
           v-if="!tasksByStatus[status.value].length"
-          class="flex flex-1 items-center justify-center rounded-xl border border-dashed border-slate-300 py-8 text-xs text-slate-400"
+          class="flex flex-1 items-center justify-center rounded-xl border border-dashed border-slate-300 py-8 text-xs text-slate-400 dark:border-slate-600 dark:text-slate-500"
         >
           拖拽任务到此列
         </div>

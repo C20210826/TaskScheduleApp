@@ -18,7 +18,7 @@ const priorityMeta = computed(
 <template>
   <li
     :draggable="!editing"
-    class="cursor-grab rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md active:cursor-grabbing"
+    class="cursor-grab rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md active:cursor-grabbing dark:border-slate-700 dark:bg-slate-800"
     @dragstart="emit('drag-start', task.id)"
     @dragend="emit('drag-end')"
   >
@@ -35,7 +35,7 @@ const priorityMeta = computed(
         <div class="flex min-w-0 flex-1 items-start gap-2">
           <span
             class="mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
-            :class="priorityMeta.badgeClass"
+            :class="[priorityMeta.badgeClass, priorityMeta.darkBadgeClass]"
           >
             {{ priorityMeta.label }}
           </span>
@@ -43,8 +43,8 @@ const priorityMeta = computed(
             class="break-words text-base font-semibold"
             :class="
               task.status === TASK_STATUS.done
-                ? 'text-slate-400 line-through'
-                : priorityMeta.titleClass
+                ? 'text-slate-400 line-through dark:text-slate-500'
+                : [priorityMeta.titleClass, priorityMeta.darkTitleClass]
             "
           >
             {{ task.title }}
@@ -53,14 +53,14 @@ const priorityMeta = computed(
         <div class="flex shrink-0 gap-2">
           <button
             type="button"
-            class="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            class="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
             @click="emit('edit', task.id)"
           >
             编辑
           </button>
           <button
             type="button"
-            class="rounded-lg px-3 py-1.5 text-xs font-medium text-red-500 transition hover:bg-red-50"
+            class="rounded-lg px-3 py-1.5 text-xs font-medium text-red-500 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/40"
             @click="emit('remove', task.id)"
           >
             删除
@@ -68,13 +68,13 @@ const priorityMeta = computed(
         </div>
       </div>
 
-      <p v-if="task.description" class="mt-1 text-sm leading-relaxed text-slate-500">
+      <p v-if="task.description" class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
         {{ task.description }}
       </p>
 
       <div class="mt-4 flex items-center justify-between">
-        <span class="text-xs text-slate-400">拖拽到其他列可改状态</span>
-        <span class="text-xs text-slate-400">
+        <span class="text-xs text-slate-400 dark:text-slate-500">拖拽到其他列可改状态</span>
+        <span class="text-xs text-slate-400 dark:text-slate-500">
           创建于 {{ new Date(task.createdAt).toLocaleDateString() }}
         </span>
       </div>
