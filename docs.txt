@@ -1,0 +1,177 @@
+================================================================================
+任务管理应用 —— 维护与修改工作文档
+================================================================================
+
+一、项目概览
+--------------------------------------------------------------------------------
+- 项目名称：task-manager-app（任务管理应用）
+- 技术栈：Vue 3（组合式 API，<script setup>）+ Vite 5 + Tailwind CSS 3 + localStorage
+- 定位：纯前端单页应用，无后端，数据保存在浏览器 localStorage
+- 运行环境：Node.js（package.json 声明 "type": "module"，全项目使用 ES Module）
+
+常用命令（在项目根目录执行）：
+- 安装依赖       npm install
+- 启动开发服务器  npm run dev      （默认 5173，被占用会自动换端口）
+- 生产构建       npm run build     （产物输出到 dist/）
+- 预览构建产物    npm run preview
+
+--------------------------------------------------------------------------------
+二、目录与文件结构
+--------------------------------------------------------------------------------
+.
+├── index.html                     # HTML 入口，含深色模式防闪烁内联脚本
+├── package.json                   # 依赖与脚本（vue / vite / tailwindcss 等）
+├── package-lock.json              # 依赖锁定文件
+├── vite.config.js                 # Vite 配置：仅启用 @vitejs/plugin-vue
+├── tailwind.config.js             # Tailwind 配置：darkMode: 'class'、content 扫描范围
+├── postcss.config.js              # Tailwind + autoprefixer 的 PostCSS 插件链
+├── .gitignore                     # 忽略 node_modules、dist、日志等
+├── Readme.md                      # 需求提示词与效果图（历史记录，非代码）
+├── pictures/                      # 需求效果图（1~6.png）
+└── src/
+    ├── main.js                    # 应用入口：createApp(App).mount('#app')
+    ├── style.css                  # Tailwind 三段式引入 + color-scheme 主题声明
+    ├── App.vue                    # 根组件：布局、主题切换按钮、任务状态聚合
+    ├── constants.js               # 任务状态/优先级常量与颜色类定义（唯一数据字典）
+    ├── composables/
+    │   ├── useTasks.js            # 任务状态管理 + localStorage 持久化（核心）
+    │   └── useTheme.js            # 深色模式状态 + 持久化（class 策略）
+    └── components/
+        ├── KanbanBoard.vue        # 三列看板 + 拖拽改状态
+        ├── TaskItem.vue           # 单任务卡片 + 编辑/删除 + 拖拽入口
+        └── TaskForm.vue           # 新建/编辑表单（标题必填校验）+ 优先级选择
+        └── TaskList.vue           # 旧版列表组件（当前未被 App 引用，可保留或删除）
+
+--------------------------------------------------------------------------------
+三、数据模型
+--------------------------------------------------------------------------------
+任务（task）对象结构，保存在 localStorage 键 "task-manager.tasks" 下（JSON 数组）：
+
+{
+  id:          string   // 唯一标识，crypto.randomUUID() 生成；不可用时回退时间戳+随机数
+  title:       string   // 必填，已 trim
+  description: string   // 选填，已 trim；为空字符串表示无描述
+  priority:    string   // 'high' | 'medium' | 'low'
+  status:      string   // 'todo' | 'doing' | 'done'
+  createdAt:   string   // ISO 时间字符串
+  updatedAt:   string   // ISO 时间字符串
+}
+
+状态枚举（src/constants.js）：
+- TASK_STATUS   = { todo: 'todo', doing: 'doing', done: 'done' }
+- TASK_STATUS_META = [{ value, label }]  // label: 待办 / 进行中 / 已完成
+
+优先级枚举（src/constants.js）：
+- TASK_PRIORITY = { high, medium, low }
+- TASK_PRIORITY_META 每项包含字段：
+    value              优先级值
+    label              显示标签（高 / 中 / 低）
+    badgeClass         徽章浅色样式
+    darkBadgeClass     徽章深色样式
+    titleClass         标题浅色样式
+    darkTitleClass     标题深色样式
+    dotClass           状态点颜色（当前未在 UI 使用，保留占位）
+    activeClass        选中态样式（深/浅共用）
+    inactiveClass      未选中态浅色样式
+    darkInactiveClass  未选中态深色样式
+
+主题存储键：
+- "theme"，取值 'dark' | 'light'，由 useTheme.js 与 index.html 内联脚本共同读写。
+
+--------------------------------------------------------------------------------
+四、核心机制说明（改动时必须关注）
+--------------------------------------------------------------------------------
+
+【1】任务持久化（src/composables/useTasks.js）
+- 模块顶部 STORAGE_KEY = 'task-manager.tasks'，全应用唯一写入点。
+- loadTasks()：启动时从 localStorage 读取；JSON.parse 失败或非数组时回退空数组，不抛错。
+- saveTasks()：JSON.stringify 写入 localStorage，try/catch 静默失败（隐私模式等）。
+- useTasks() 返回 { tasks, addTask, updateTask, removeTask }；内部
+  watch(tasks, saveTasks, { deep: true }) 保证每次增删改都自动写入。
+- addTask 默认 priority=medium、status=todo，新任务插入数组头部。
+- updateTask 只更新传入 patch 字段并刷新 updatedAt。
+- removeTask 按 id 过滤。
+
+【2】深色模式（class 策略，src/composables/useTheme.js + index.html + tailwind.config.js）
+- tailwind.config.js 必须保持 darkMode: 'class'，否则所有 dark:* 变体失效（这也是
+  历史反馈"只有按钮没有效果"的根因来源之一）。
+- index.html <head> 内联脚本：在 Vue 挂载前读取 localStorage['theme']，若为 'dark'
+  则给 <html> 加 .dark 类，用于防止刷新时白屏闪烁（FOUC）。
+- useTheme.js：isDark 响应式状态以 <html> 是否含 .dark 为准；applyTheme 切换
+  document.documentElement 的 .dark 类并写回 localStorage；watch(immediate) 统一同步。
+- src/style.css 的 color-scheme: light / html.dark { color-scheme: dark } 用于让
+  滚动条、输入光标、自动填充等浏览器原生控件跟随主题。
+
+【3】状态流转（看板拖拽）
+- App.vue 用 computed columns 把 tasks 按 status 分组为 { todo:[], doing:[], done:[] }，
+  传给 KanbanBoard。
+- KanbanBoard 的拖拽事件流：
+    TaskItem 的 @dragstart/ @dragend -> handleDragStart/handleDragEnd 记录 draggingTaskId；
+    列的 @dragover.prevent 高亮、@drop.prevent 触发 handleDrop(status)，
+    最终 emit('change-status', { id, status }) 一路冒泡到 App.vue 的 handleChangeStatus
+    -> updateTask(id, { status })。
+- 拖拽用原生 HTML5 drag & drop，没有引入第三方拖拽库。
+
+【4】组件事件契约（父子通信全为 events + props，无全局状态库）
+- App.vue -> KanbanBoard(props: tasksByStatus, editingTaskId；
+    events: edit/remove/save/cancel-edit/change-status)。
+- KanbanBoard -> TaskItem(props: task, editing；
+    events: edit/remove/save/cancel-edit/drag-start/drag-end)。
+- TaskItem 编辑态内部渲染 TaskForm（初始值来自 task 的 initialTask prop），
+  提交时 save 事件回传 { id, title, description, priority }。
+- TaskForm 对外：props(initialTask, submitText)，events(submit, cancel)。
+  表单提交时校验 title.trim() 非空，否则 error 提示"标题为必填项，请输入任务标题"。
+
+--------------------------------------------------------------------------------
+五、样式约定（Tailwind）
+--------------------------------------------------------------------------------
+- Tailwind content 扫描范围见 tailwind.config.js：
+    ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}']
+- 重要：所有 Tailwind 类必须是完整字符串字面量，不能动态拼接（如 'bg-' + color），
+  否则 content 扫描不到、类不会生成。constants.js 中每档优先级颜色用独立字段
+  （badgeClass / darkBadgeClass / titleClass / darkTitleClass 等）就是为了规避拼接。
+- 新增组件/新类后需确认：类名完整出现在 .vue/.js 中；改动 tailwind.config.js 或
+  新增动态颜色后需重启 dev server（Vite 对 tailwind.config.js 的变化不会热更新）。
+- 深色适配模式：每个浅色元素都补 dark: 前缀变体，通过 html.dark 类整体切换。
+
+--------------------------------------------------------------------------------
+六、修改 TODO 时的注意事项（分场景）
+--------------------------------------------------------------------------------
+1) 新增任务字段：
+   - useTasks.js addTask 默认值 + （如需）updateTask 处理；
+   - TaskForm.vue 表单输入 + 提交 payload；
+   - TaskItem.vue 展示；
+   - 老数据没有该字段时要兼容（读取处做缺省兜底）。
+2) 新增/调整优先级档位：
+   - constants.js TASK_PRIORITY 与 TASK_PRIORITY_META 同步改，颜色用完整类字面量，
+     并同时维护浅色与 dark 两套字段；
+   - TaskForm.vue 优先级按钮网格 grid-cols-3 若档位数变化需调整列数。
+3) 调整状态列/增减状态：
+   - constants.js TASK_STATUS / TASK_STATUS_META；
+   - App.vue columns computed 的 groups 键同步；
+   - KanbanBoard 列布局、拖拽逻辑、空列提示。
+4) 改深色模式：
+   - 配色分散在 App.vue / KanbanBoard.vue / TaskItem.vue / TaskForm.vue / constants.js
+     各处 dark: 变体，需整体检查；
+   - 不要动 index.html 内联脚本与 useTheme.js 的 STORAGE_KEY 'theme'（与深色唯一键
+     一致，改动会导致历史选择失效）。
+
+--------------------------------------------------------------------------------
+七、验证清单（每次改动后建议执行）
+--------------------------------------------------------------------------------
+- npm run build 通过（语法 + 打包校验）。
+- 运行时验证：npm run dev 后浏览器打开，检查增删查改、标题必填拦截、三状态
+  拖拽、优先级着色、深色切换与记忆、刷新后数据不丢失。
+- localStorage 键位核对：'task-manager.tasks'（任务）、'theme'（主题）。
+- 类名扫描核对：rg "dark:" src（确认 dark 变体完整）。
+
+--------------------------------------------------------------------------------
+八、已知问题 / 残留事项
+--------------------------------------------------------------------------------
+- npm audit 报告 2 个漏洞（1 moderate, 1 high），来源为构建工具链传递依赖，
+  未处理（如需处理，谨慎升级并回归测试）。
+- src/components/TaskList.vue 为早期列表视图，当前根组件未引用，属历史遗留，
+  可经确认后删除。
+- constants.js 中 dotClass（优先级色点）当前未在 UI 使用，保留可作后续扩展。
+- localStorage 按"浏览器 + 域名/端口"隔离：换浏览器、换端口、无痕窗口或手动清除
+  站点数据后任务不会保留，这是 localStorage 固有特性，非缺陷。
