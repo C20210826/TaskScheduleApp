@@ -1,5 +1,6 @@
 <script setup>
 import { reactive, ref, watch } from 'vue'
+import { TASK_PRIORITY, TASK_PRIORITY_META } from '../constants.js'
 
 const props = defineProps({
   // 编辑模式时传入待编辑任务，新建模式为 null
@@ -9,7 +10,7 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'cancel'])
 
-const form = reactive({ title: '', description: '' })
+const form = reactive({ title: '', description: '', priority: TASK_PRIORITY.medium })
 const error = ref('')
 
 watch(
@@ -17,6 +18,7 @@ watch(
   (task) => {
     form.title = task?.title ?? ''
     form.description = task?.description ?? ''
+    form.priority = task?.priority ?? TASK_PRIORITY.medium
     error.value = ''
   },
   { immediate: true },
@@ -28,9 +30,14 @@ function handleSubmit() {
     error.value = '标题为必填项，请输入任务标题'
     return
   }
-  emit('submit', { title, description: form.description.trim() })
+  emit('submit', {
+    title,
+    description: form.description.trim(),
+    priority: form.priority,
+  })
   form.title = ''
   form.description = ''
+  form.priority = TASK_PRIORITY.medium
   error.value = ''
 }
 
@@ -57,6 +64,21 @@ function handleCancel() {
       placeholder="任务描述（选填）"
       class="w-full resize-none rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
     ></textarea>
+    <div>
+      <span class="mb-1.5 block text-xs font-medium text-slate-500">优先级</span>
+      <div class="grid grid-cols-3 gap-2">
+        <button
+          v-for="priority in TASK_PRIORITY_META"
+          :key="priority.value"
+          type="button"
+          class="rounded-xl border px-3 py-2 text-sm font-medium transition"
+          :class="form.priority === priority.value ? priority.activeClass : priority.inactiveClass"
+          @click="form.priority = priority.value"
+        >
+          {{ priority.label }}
+        </button>
+      </div>
+    </div>
     <div class="flex justify-end gap-2">
       <button
         type="button"

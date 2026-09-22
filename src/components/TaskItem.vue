@@ -1,5 +1,6 @@
 <script setup>
-import { TASK_STATUS, TASK_STATUS_META } from '../constants.js'
+import { computed } from 'vue'
+import { TASK_STATUS, TASK_PRIORITY_META } from '../constants.js'
 import TaskForm from './TaskForm.vue'
 
 const props = defineProps({
@@ -7,11 +8,20 @@ const props = defineProps({
   editing: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['edit', 'remove', 'save', 'cancel-edit', 'change-status'])
+const emit = defineEmits(['edit', 'remove', 'save', 'cancel-edit', 'drag-start', 'drag-end'])
+
+const priorityMeta = computed(
+  () => TASK_PRIORITY_META.find((p) => p.value === props.task.priority) ?? TASK_PRIORITY_META[1],
+)
 </script>
 
 <template>
-  <li class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+  <li
+    :draggable="!editing"
+    class="cursor-grab rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md active:cursor-grabbing"
+    @dragstart="emit('drag-start', task.id)"
+    @dragend="emit('drag-end')"
+  >
     <TaskForm
       v-if="editing"
       :initial-task="task"
@@ -22,12 +32,24 @@ const emit = defineEmits(['edit', 'remove', 'save', 'cancel-edit', 'change-statu
 
     <div v-else>
       <div class="flex items-start justify-between gap-4">
-        <h3
-          class="text-base font-semibold text-slate-800"
-          :class="{ 'text-slate-400 line-through': task.status === TASK_STATUS.done }"
-        >
-          {{ task.title }}
-        </h3>
+        <div class="flex min-w-0 flex-1 items-start gap-2">
+          <span
+            class="mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
+            :class="priorityMeta.badgeClass"
+          >
+            {{ priorityMeta.label }}
+          </span>
+          <h3
+            class="break-words text-base font-semibold"
+            :class="
+              task.status === TASK_STATUS.done
+                ? 'text-slate-400 line-through'
+                : priorityMeta.titleClass
+            "
+          >
+            {{ task.title }}
+          </h3>
+        </div>
         <div class="flex shrink-0 gap-2">
           <button
             type="button"
@@ -51,22 +73,7 @@ const emit = defineEmits(['edit', 'remove', 'save', 'cancel-edit', 'change-statu
       </p>
 
       <div class="mt-4 flex items-center justify-between">
-        <div class="flex gap-1 rounded-full bg-slate-100 p-1">
-          <button
-            v-for="status in TASK_STATUS_META"
-            :key="status.value"
-            type="button"
-            class="rounded-full px-3 py-1 text-xs font-medium transition"
-            :class="
-              task.status === status.value
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            "
-            @click="emit('change-status', { id: task.id, status: status.value })"
-          >
-            {{ status.label }}
-          </button>
-        </div>
+        <span class="text-xs text-slate-400">拖拽到其他列可改状态</span>
         <span class="text-xs text-slate-400">
           创建于 {{ new Date(task.createdAt).toLocaleDateString() }}
         </span>

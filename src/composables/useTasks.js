@@ -1,5 +1,5 @@
 import { ref, watch } from 'vue'
-import { TASK_STATUS } from '../constants.js'
+import { TASK_STATUS, TASK_PRIORITY } from '../constants.js'
 
 const STORAGE_KEY = 'task-manager.tasks'
 
@@ -32,12 +32,13 @@ function createId() {
 export function useTasks() {
   const tasks = ref(loadTasks())
 
-  function addTask({ title, description = '' }) {
+  function addTask({ title, description = '', priority = TASK_PRIORITY.medium }) {
     const now = new Date().toISOString()
     const task = {
       id: createId(),
       title: title.trim(),
       description: description.trim(),
+      priority,
       status: TASK_STATUS.todo,
       createdAt: now,
       updatedAt: now,
